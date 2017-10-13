@@ -3,17 +3,17 @@
 """
 Created on Wed Oct  4 14:49:53 2017
 
-@author: KingDono
+@authors: Donovan Colton
+          Faisal Almansour
 """
-
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn import svm, preprocessing
+import matplotlib.pyplot as plt2
+from sklearn import svm, preprocessing,datasets
 from sklearn.svm import SVC
 import pandas as pd
-from matplotlib import style
 import time
-import sys
+from mpl_toolkits.mplot3d import Axes3D
 
 FEATURES =  ['DE Ratio',
              'Trailing P/E',
@@ -51,11 +51,10 @@ FEATURES =  ['DE Ratio',
              'Short % of Float',
              'Shares Short (prior ']
 
-# all values at 0th row data_df.loc[:0]
+# all values 0th row:    data_df.loc[:0]
 
 #import entire CSV
 data_df = pd.DataFrame.from_csv("key_stats.csv")
-
 
 #train data down to ticker klac
 train_data = data_df[:1403]
@@ -63,39 +62,28 @@ train_data = data_df[:1403]
 #test data from kmb to the end of csv
 test_data = data_df[1404:]
 
+tdp = plt2.figure().add_subplot(111, projection='3d')
 
-def trainDataSet():
-    X = np.array(train_data[FEATURES].values)
-    y = (   train_data["Status"]
-            .replace("underperform",0)
-            .replace("outperform",1)
-            .values.tolist())
-    
-    X = preprocessing.scale(X)
-    
-    return X,y
-
-def testDataSet():
-    Xtest = np.array(test_data[FEATURES].values)
-    ytest = (   test_data["Status"]
+def createDataSet(d):
+    Xtest = np.array(d[FEATURES].values)
+    ytest = (   d["Status"]
                 .replace("underperform",0)
                 .replace("outperform",1)
                 .values.tolist())
-    
     Xtest = preprocessing.scale(Xtest)
-    
     return Xtest,ytest
-    
 print()
 
 #gather training data
-X, y = trainDataSet();
+X, y = createDataSet(train_data);
+                    
 #Train cpu using linearSVC 
-clf = SVC(kernel="linear", verbose=True)
+clf = SVC(kernel="rbf", verbose=True)
 clf.fit(X, y) 
 
 #Gather testing data
-Xtest,ytest = testDataSet()
+#1260 values in test
+Xtest,ytest = createDataSet(test_data)
 #Gather y[] predictions from testing data
 ypred = clf.predict(Xtest)
 
@@ -104,27 +92,39 @@ errors = np.sum(np.abs(ytest - ypred))
 perc_error = errors / np.shape(test_data)[0]
 
 print()
-errordata_df = pd.DataFrame
-num = 1404
+
+csvnum = 1404
+num = 0
+
 for i in ypred:
     if i == 1:
         prediction = "Buy"
-        if (data_df["Status"][num] == 'underperform'):
-            print(data_df["Ticker"][num],"\t", data_df["Price"][num],"\t",data_df["Status"][num],"\t", prediction)
-    if i == 0:
+        if (data_df["Status"][csvnum] == 'underperform'):
+            print(data_df["Ticker"][csvnum],"\t", data_df["Price"][csvnum],"\t",data_df["Status"][csvnum],"\t", prediction)
+            #add errors into a new numpy array?
+            tdp.scatter(data_df["DE Ratio"][csvnum], data_df["Profit Margin"][csvnum], data_df["Price"][csvnum], c='r', marker='o')
+            
+    elif i == 0:
         prediction = "Sell"
-        if (data_df["Status"][num] == 'outperform'):
-            print(data_df["Ticker"][num],"\t", data_df["Price"][num],"\t",data_df["Status"][num],"\t", prediction)
-        
-    
-    #print(data_df["Ticker"][num],"\t", data_df["Price"][num],"\t", data_df["Status"][num],"\t", prediction)
+        if (data_df["Status"][csvnum] == 'outperform'):
+            print(data_df["Ticker"][csvnum],"\t", data_df["Price"][csvnum],"\t",data_df["Status"][csvnum],"\t", prediction)
+            tdp.scatter(data_df["DE Ratio"][csvnum], data_df["Profit Margin"][csvnum], data_df["Price"][csvnum], c='r', marker='o')     
+   
+    #print all tickers along w predictions
+    #print(data_df["Ticker"][csvnum],"\t", data_df["Price"][csvnum],"\t", data_df["Status"][csvnum],"\t", prediction)
+    csvnum+=1
     num+=1
-#    time.sleep(.09)
-    
-#sys.exit("Error message")
 
-#plt.figure(1)
-#plt.imshow([yPred[:10].transpose(), ytest[:10]])
+tdp.set_xlabel('DE Ratio')
+tdp.set_ylabel('Profit Margin')
+tdp.set_zlabel('Price')
+
+plt.show()
+
+nr_to_show = 1500
+#purple = good
+plt.figure(1)
+plt.imshow(np.array([np.abs(ypred[:nr_to_show] - ytest[:nr_to_show])]), aspect='auto')
 
 print("\ntest error: ", perc_error)
 print()

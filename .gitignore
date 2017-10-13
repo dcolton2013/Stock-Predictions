@@ -1,4 +1,7 @@
 data/*
+docs/*
+other/*
+*.zip
 
 
 # Byte-compiled / optimized / DLL files
